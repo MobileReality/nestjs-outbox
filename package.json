@@ -1,0 +1,124 @@
+{
+  "name": "@mobile-reality/nestjs-outbox",
+  "version": "0.0.1-alpha.1",
+  "private": true,
+  "description": "Multi-engine outbox pattern for NestJS",
+  "author": "Mobile Reality <biuro@mobilereality.pl> (https://mobilereality.pl)",
+  "contributors": [
+    {
+      "name": "@NtTestAlert",
+      "url": "https://github.com/NtTestAlert"
+    }
+  ],
+  "keywords": [
+    "nestjs",
+    "outbox",
+    "typeorm",
+    "mobilereality",
+    "mobile reality"
+  ],
+  "repository": "https://github.com/MobileReality/nestjs-outbox",
+  "bugs": {
+    "url": "https://github.com/MobileReality/nestjs-outbox/issues"
+  },
+  "homepage": "https://github.com/MobileReality/nestjs-outbox/#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "restricted"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "test:typeorm:mysql": "cross-env DB_TYPE=mysql node --expose-gc --max-old-space-size=3072 ./node_modules/jest/bin/jest.js --config=./test/jest.typeorm.config.js --runInBand --logHeapUsage",
+    "test:typeorm:postgres": "cross-env DB_TYPE=postgres node --expose-gc --max-old-space-size=3072 ./node_modules/jest/bin/jest.js --config=./test/jest.typeorm.config.js --runInBand --logHeapUsage",
+    "prepack": "pinst --disable",
+    "postpack": "pinst --enable",
+    "prepare": "(npx husky install || echo no-husky) && npm run build"
+  },
+  "lint-staged": {
+    "**/*.{js,ts}": [
+      "eslint --ext .js,.ts --fix -f compact"
+    ]
+  },
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "dependencies": {
+    "crc": "^4.1.1",
+    "date-fns": "^2.29.3",
+    "lodash": "^4.17.21",
+    "mnemonist": "^0.39.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.4.2",
+    "@commitlint/config-conventional": "^17.4.2",
+    "@mobile-reality/eslint-config": "^0.8.0",
+    "@nestjs/common": "^8.4.7",
+    "@nestjs/core": "^8.4.7",
+    "@nestjs/platform-express": "^8.4.7",
+    "@nestjs/typeorm": "~8.0.4",
+    "@types/jest": "^28.0.0",
+    "@types/lodash": "^4.14.185",
+    "@types/node": "^16.0.0",
+    "@typescript-eslint/eslint-plugin": "~5.31.0",
+    "@typescript-eslint/parser": "~5.31.0",
+    "cross-env": "^7.0.3",
+    "eslint": "~8.20.0",
+    "eslint-plugin-jest": "^26.9.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-security": "^1.6.0",
+    "eslint-plugin-unused-imports": "^2.0.0",
+    "husky": "^8.0.3",
+    "jest": "^28.0.0",
+    "jest-extended": "^3.0.0",
+    "lint-staged": "^13.1.0",
+    "mysql2": "^2.3.3",
+    "pg": "^8.8.0",
+    "pinst": "^3.0.0",
+    "pino": "^8.6.0",
+    "prettier": "^2.7.1",
+    "rimraf": "^4.1.0",
+    "ts-jest": "^28.0.0",
+    "ts-loader": "^9.3.0",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.1.0",
+    "typeorm": "0.2.38",
+    "typescript": "4.7.3"
+  },
+  "peerDependencies": {
+    "@mikro-orm/core": "^5.3.1",
+    "@mikro-orm/nestjs": "^5.1.1",
+    "@mikro-orm/postgresql": "^5.3.1",
+    "@nestjs/common": "^8.0.0 || ^9.0.0",
+    "@nestjs/core": "^8.0.0 || ^9.0.0",
+    "@nestjs/typeorm": "~8.0.4",
+    "pino": "^8.6.0",
+    "reflect-metadata": "^0.1.13",
+    "typeorm": "0.2.38"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/typeorm": {
+      "optional": true
+    },
+    "typeorm": {
+      "optional": true
+    },
+    "@mikro-orm/core": {
+      "optional": true
+    },
+    "@mikro-orm/nestjs": {
+      "optional": true
+    },
+    "@mikro-orm/postgresql": {
+      "optional": true
+    },
+    "pino": {
+      "optional": true
+    }
+  }
+}
