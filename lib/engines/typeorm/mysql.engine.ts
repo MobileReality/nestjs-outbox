@@ -35,10 +35,12 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
         return EntityManager;
     }
     async saveOutboxCall(
-        entityManager: EntityManager,
+        entityManager: EntityManager | null,
         outbox: RegisteredOutbox,
         args: any,
     ): Promise<void> {
+        // eslint-disable-next-line no-param-reassign
+        if (!entityManager) entityManager = this.connection.manager;
         const serializedArgs = JSON.stringify(args);
         await entityManager.insert(OutboxEntity, {
             name: outbox.name,

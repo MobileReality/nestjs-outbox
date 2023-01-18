@@ -23,8 +23,8 @@ describe('Test appendOutboxInfo', () => {
     });
 
     it('Should append false for instant', async () => {
-        const testSpy = spyOnOutbox(testService.testInstant);
-        await expect(testService.testInstant(0)).resolves.not.toThrow();
+        const testSpy = spyOnOutbox(testService.testBypass);
+        await expect(testService.testBypass(0)).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
         expect(testSpy).toHaveBeenCalledWith(0, undefined, undefined, false);
     });

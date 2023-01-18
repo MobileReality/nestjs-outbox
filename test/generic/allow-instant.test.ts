@@ -3,7 +3,7 @@ import 'jest-extended';
 import { TestService } from './test.service';
 import type { INestApplicationContext } from '@nestjs/common';
 import { OutboxPersistenceEngine } from '../../lib/engines/engine.service';
-import { spyOnOutbox } from '../../lib/util/test.helpers';
+import { spyOnOutbox } from '../../lib';
 
 describe('Test allowInstant for PARAM', () => {
     let app: INestApplicationContext;
@@ -22,8 +22,14 @@ describe('Test allowInstant for PARAM', () => {
     });
 
     it('Should pass instant when allowed', async () => {
-        const testSpy = spyOnOutbox(testService.testInstant);
+        const testSpy = spyOnOutbox(testService.testInstant, true);
         await expect(testService.testInstant(0)).resolves.not.toThrow();
+        expect(testSpy).toHaveBeenCalledTimes(1);
+        expect(testSpy).toHaveBeenCalledWith(0);
+    });
+    it('Should pass instant bypass when allowed', async () => {
+        const testSpy = spyOnOutbox(testService.testBypass);
+        await expect(testService.testBypass(0)).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
         expect(testSpy).toHaveBeenCalledWith(0);
     });
@@ -52,8 +58,14 @@ describe('Test allowInstant for RESOLVER', () => {
     });
 
     it('Should pass instant when allowed', async () => {
-        const testSpy = spyOnOutbox(testService.testInstant);
+        const testSpy = spyOnOutbox(testService.testInstant, true);
         await expect(testService.testInstant(0)).resolves.not.toThrow();
+        expect(testSpy).toHaveBeenCalledTimes(1);
+        expect(testSpy).toHaveBeenCalledWith(0);
+    });
+    it('Should pass instant bypass when allowed', async () => {
+        const testSpy = spyOnOutbox(testService.testBypass);
+        await expect(testService.testBypass(0)).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
         expect(testSpy).toHaveBeenCalledWith(0);
     });

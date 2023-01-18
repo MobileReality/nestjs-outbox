@@ -10,17 +10,28 @@ export interface OutboxDecoratorMetadata {
     sequential: boolean;
     enableHandler: boolean;
     allowInstant: boolean;
+    instantBypass: boolean;
 }
 export type OutboxDecoratorMetadataType = OutboxDecoratorMetadata | (() => OutboxDecoratorMetadata);
 
 export interface OutboxDecoratorConfig {
     grouping?: string;
+    /**
+     * default false
+     */
     sequential?: boolean;
     /**
      * default true
      */
     enableHandler?: boolean;
+    /**
+     * default false
+     */
     allowInstant?: boolean;
+    /**
+     * default false
+     */
+    instantBypass?: boolean;
 }
 export type OutboxDecoratorConfigType = OutboxDecoratorConfig | (() => OutboxDecoratorConfig);
 
@@ -62,6 +73,7 @@ export function Outbox(
                   sequential: Boolean(config?.sequential),
                   enableHandler: Boolean(config?.enableHandler ?? true),
                   allowInstant: Boolean(config?.allowInstant),
+                  instantBypass: Boolean(config?.instantBypass),
               }
             : function f(this: any) {
                   const resolvedName = isFunction(name) ? name.apply(this) : name;
@@ -73,6 +85,7 @@ export function Outbox(
                       sequential: Boolean(resolvedConfig?.sequential),
                       enableHandler: Boolean(resolvedConfig?.enableHandler ?? true),
                       allowInstant: Boolean(resolvedConfig?.allowInstant),
+                      instantBypass: Boolean(resolvedConfig?.instantBypass),
                   };
               };
     return SetMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);

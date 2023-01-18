@@ -1,20 +1,30 @@
 import _ from 'lodash';
 
-export interface RegisteredOutbox {
+export type RegisteredOutboxHandler = {
+    type: 'handler';
     allowInstant: boolean;
+    instantBypass: boolean;
     name: string;
     grouping: string;
     // tag: string;
     handlerEnabled: boolean;
     sequential: boolean;
-    originalThis: any;
+
+    originalThis?: any;
     originalFunction: any;
 
+    argumentCount?: number;
+};
+
+export type RegisteredOutboxMethod = Omit<RegisteredOutboxHandler, 'type'> & {
+    type: 'method';
     methodKey: string;
     instanceName: string;
 
     argumentCount: number;
-}
+};
+
+export type RegisteredOutbox = RegisteredOutboxHandler | RegisteredOutboxMethod;
 
 export const isSerializable = (obj: any) => {
     if (

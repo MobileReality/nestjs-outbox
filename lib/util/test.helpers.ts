@@ -1,8 +1,8 @@
-import type { RegisteredOutbox } from '../core/common';
+import type { RegisteredOutbox, RegisteredOutboxMethod } from '../core/common';
 import SpyInstance = jest.SpyInstance;
 
 export const spyOnOutbox = <T extends (...params: any) => any>(method: T, bypassOutbox = false) => {
-    const registration = (method as any).outbox as RegisteredOutbox;
+    const registration = (method as any).outbox as RegisteredOutboxMethod;
     // TODO add test for bypass
     if (bypassOutbox) {
         return jest
@@ -12,7 +12,7 @@ export const spyOnOutbox = <T extends (...params: any) => any>(method: T, bypass
             ) as SpyInstance<ReturnType<T>, Parameters<T>>;
     }
     return jest.spyOn(
-        (method as any).outbox as RegisteredOutbox,
+        (method as any).outbox as RegisteredOutboxMethod,
         'originalFunction',
     ) as SpyInstance<ReturnType<T>, Parameters<T>>;
 };

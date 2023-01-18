@@ -1,7 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import type { OutboxModuleConfig } from '../core/outbox.config';
 import { TransactionResolverEnum } from '../core/outbox.config';
-import type { RegisteredOutbox } from '../core/common';
+import type { RegisteredOutbox, RegisteredOutboxMethod } from '../core/common';
 import { isSerializable } from '../core/common';
 import type { OutboxModuleEngineConfig } from './engines.config';
 import type { OutboxEntity } from './typeorm/outbox.entity';
@@ -18,7 +18,7 @@ export abstract class OutboxPersistenceEngine<T> {
         let finalArgs = args;
         if (this.config.appendOutboxInfo) {
             // We need to fill optional parameters with undefined
-            const missing = outbox.argumentCount - args.length;
+            const missing = (outbox.argumentCount ?? 0) - args.length;
             const fillers =
                 // eslint-disable-next-line unicorn/no-useless-undefined
                 missing > 0 ? Array.from({ length: missing }).fill(undefined) : [];
@@ -30,11 +30,11 @@ export abstract class OutboxPersistenceEngine<T> {
     public abstract pollOutbox(sequential: boolean, name: string): Promise<void>;
     public abstract getTransactionClass(): (new (...args: any[]) => T) | null;
     public abstract saveOutboxCall(
-        transactionObject: T,
+        transactionObject: T | null,
         outbox: RegisteredOutbox,
         ...args: any[]
     ): Promise<void>;
-    public hookOriginal(config: OutboxModuleEngineConfig, outbox: RegisteredOutbox) {
+    public hookOriginal(config: OutboxModuleEngineConfig, outbox: RegisteredOutboxMethod) {
         const paramPosition = this.getParamPosition(config, outbox);
         // Hook the function
         outbox.originalThis[outbox.methodKey] = async (...args: any[]) => {
@@ -49,7 +49,11 @@ export abstract class OutboxPersistenceEngine<T> {
                         'No transaction found while allowInstant is not true',
                     );
                 }
-                return await this.callOriginal(outbox, args, false);
+                if (outbox.instantBypass) {
+                    return await this.callOriginal(outbox, args, false);
+                }
+                await this.saveOutboxCall(null, outbox, args);
+                return;
             }
             const filteredArgs =
                 config.transactionResolver === TransactionResolverEnum.PARAM
@@ -62,7 +66,10 @@ export abstract class OutboxPersistenceEngine<T> {
         };
         outbox.originalThis[outbox.methodKey].outbox = outbox;
     }
-    private getParamPosition(config: OutboxModuleEngineConfig, outbox: RegisteredOutbox): number {
+    private getParamPosition(
+        config: OutboxModuleEngineConfig,
+        outbox: RegisteredOutboxMethod,
+    ): number {
         const types = Reflect.getMetadata(
             'design:paramtypes',
             outbox.originalThis,

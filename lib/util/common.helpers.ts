@@ -14,7 +14,7 @@ export function getCallerOutboxInfo(argsInput?: IArguments | any[]) {
 // eslint-disable-next-line func-style
 export function setManualOutboxConfig<T, M extends keyof T>(
     object: T,
-    // TODO restrict M to methods?
+    // TODO restrict M to methods?  & ((...params: any) => any)
     methodName: M,
     config: Partial<OutboxDecoratorMetadata> & { name: string },
 ) {
@@ -24,6 +24,7 @@ export function setManualOutboxConfig<T, M extends keyof T>(
             sequential: false,
             enableHandler: true,
             allowInstant: false,
+            instantBypass: false,
             ...config,
         },
         object[methodName],

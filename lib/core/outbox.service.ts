@@ -5,7 +5,7 @@ import type { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import type { Module } from '@nestjs/core/injector/module';
 import crc from 'crc';
 import { MultiMap } from 'mnemonist';
-import type { RegisteredOutbox } from './common';
+import type { RegisteredOutbox, RegisteredOutboxMethod } from './common';
 import { OUTBOX_MODULE_CONFIG, OutboxModuleConfig } from './outbox.config';
 import { OutboxPersistenceEngine } from '../engines/engine.service';
 import type { OutboxDecoratorMetadataType } from './outbox.decorator';
@@ -157,7 +157,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
                 const prototype = Object.getPrototypeOf(instance) || {};
                 const isRequestScoped = !wrapper.isDependencyTreeStatic();
                 this.metadataScanner.scanFromPrototype(instance, prototype, (methodKey: string) => {
-                    this.subscribeToEventIfListener(
+                    this.wrapOutboxMethod(
                         name,
                         instance,
                         methodKey,
@@ -168,7 +168,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             });
     }
 
-    private subscribeToEventIfListener(
+    private wrapOutboxMethod(
         instanceName: string,
         instance: Record<string, any>,
         methodKey: string,
@@ -205,16 +205,19 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             sequential,
             enableHandler,
             allowInstant,
+            instantBypass,
         } = eventListenerMetadata;
         const name = OutboxService.shortName(originalName);
         const grouping = originalGrouping ? OutboxService.shortName(originalGrouping) : name;
 
-        const outbox: RegisteredOutbox = {
+        const outbox: RegisteredOutboxMethod = {
+            type: 'method',
             handlerEnabled: enableHandler,
             name,
             grouping,
             sequential: Boolean(sequential),
             allowInstant: Boolean(allowInstant),
+            instantBypass: Boolean(instantBypass),
             originalThis: instance,
             originalFunction: instance[methodKey],
             instanceName,
@@ -223,8 +226,12 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         };
         const previousOutbox = this.outboxes.get(name);
         if (previousOutbox) {
+            const collided =
+                previousOutbox.type === 'method'
+                    ? `${previousOutbox.instanceName}.${previousOutbox.methodKey}`
+                    : `handler outbox`; // TODO better error message
             throw new ConflictException(
-                `Outbox at ${instanceName}.${methodKey} has name collision with ${previousOutbox.instanceName}.${previousOutbox.methodKey}`,
+                `Outbox at ${instanceName}.${methodKey} has name collision with ${collided}`,
             );
         }
         this.outboxes.set(name, outbox);

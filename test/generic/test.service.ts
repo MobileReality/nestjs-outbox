@@ -6,7 +6,11 @@ import { getCallerOutboxInfo, ManualOutbox, Outbox, setManualOutboxConfig } from
 export class TestService {
     public readonly random: number = Math.random() * 100;
     constructor() {
-        setManualOutboxConfig(this, 'testManual', { name: 'manually', allowInstant: true });
+        setManualOutboxConfig(this, 'testManual', {
+            name: 'manually',
+            allowInstant: true,
+            instantBypass: true,
+        });
     }
 
     @Outbox('tester', { enableHandler: true, sequential: false })
@@ -23,11 +27,17 @@ export class TestService {
         console.log('target', n, something);
     }
 
+    @Outbox('tester3', { allowInstant: true, instantBypass: true })
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async testBypass(n: number, something?: any, manager?: EntityManager): Promise<void | string> {
+        console.log('target', n, something);
+    }
+
     @Outbox(
         function name(this: TestService) {
             return `dynamic${this.random}`;
         },
-        { allowInstant: true },
+        { allowInstant: true, instantBypass: true },
     )
     async testDynamic(manager?: EntityManager) {
         //
