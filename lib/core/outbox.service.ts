@@ -8,10 +8,11 @@ import { MultiMap } from 'mnemonist';
 import type { RegisteredOutbox } from './common';
 import { OUTBOX_MODULE_CONFIG, OutboxModuleConfig } from './outbox.config';
 import { OutboxPersistenceEngine } from '../engines/engine.service';
-import type { OutboxDecoratorMetadata } from './outbox.decorator';
+import type { OutboxDecoratorMetadataType } from './outbox.decorator';
 import { OUTBOX_DECORATOR_METADATA } from './outbox.decorator';
 import type pino from 'pino';
 import type { OnModuleDestroy } from '@nestjs/common/interfaces/hooks/on-destroy.interface';
+import { isFunction } from 'lodash';
 
 @Injectable()
 export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleDestroy {
@@ -172,13 +173,16 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         moduleRef: Module,
     ) {
-        const eventListenerMetadata = this.reflector.get<OutboxDecoratorMetadata>(
+        const eventListenerMetadataWrapper = this.reflector.get<OutboxDecoratorMetadataType>(
             OUTBOX_DECORATOR_METADATA,
             instance[methodKey],
         );
-        if (!eventListenerMetadata) {
+        if (!eventListenerMetadataWrapper) {
             return;
         }
+        const eventListenerMetadata = isFunction(eventListenerMetadataWrapper)
+            ? eventListenerMetadataWrapper.apply(instance)
+            : eventListenerMetadataWrapper;
 
         const types = Reflect.getMetadata('design:paramtypes', instance, methodKey);
         const {

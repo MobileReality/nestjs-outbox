@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
+import { isFunction } from 'lodash';
 
 export const OUTBOX_DECORATOR_METADATA = 'OUTBOX_DECORATOR_METADATA';
 
@@ -9,13 +10,18 @@ export interface OutboxDecoratorMetadata {
     enableHandler: boolean;
     allowInstant: boolean;
 }
+export type OutboxDecoratorMetadataType = OutboxDecoratorMetadata | (() => OutboxDecoratorMetadata);
 
 export interface OutboxDecoratorConfig {
     grouping?: string;
     sequential?: boolean;
+    /**
+     * default true
+     */
     enableHandler?: boolean;
     allowInstant?: boolean;
 }
+export type OutboxDecoratorConfigType = OutboxDecoratorConfig | (() => OutboxDecoratorConfig);
 
 type allowedDescriptors =
     | TypedPropertyDescriptor<(...p: any[]) => Promise<void>>
@@ -34,21 +40,39 @@ type outboxDecorator = <
     descriptor: D,
 ) => D;
 
-export function Outbox(name: string, config?: OutboxDecoratorConfig): outboxDecorator;
-export function Outbox(name: string, enableHandler: boolean): outboxDecorator;
+export function Outbox(
+    name: string | (() => string),
+    config?: OutboxDecoratorConfigType,
+): outboxDecorator;
+export function Outbox(name: string | (() => string), enableHandler: boolean): outboxDecorator;
 
 // eslint-disable-next-line func-style
 export function Outbox(
-    name: string,
-    configOrBool?: OutboxDecoratorConfig | boolean,
+    name: string | (() => string),
+    configOrBool?: OutboxDecoratorConfigType | boolean,
 ): outboxDecorator {
     const config =
         typeof configOrBool === 'boolean' ? { enableHandler: configOrBool } : configOrBool;
-    return SetMetadata(OUTBOX_DECORATOR_METADATA, {
-        name,
-        grouping: config?.grouping,
-        sequential: Boolean(config?.sequential),
-        enableHandler: Boolean(config?.enableHandler),
-        allowInstant: Boolean(config?.allowInstant),
-    });
+    const decoratorMeta: OutboxDecoratorMetadataType =
+        !isFunction(name) && !isFunction(config)
+            ? {
+                  name,
+                  grouping: config?.grouping,
+                  sequential: Boolean(config?.sequential),
+                  enableHandler: Boolean(config?.enableHandler ?? true),
+                  allowInstant: Boolean(config?.allowInstant),
+              }
+            : function f(this: any) {
+                  const resolvedName = isFunction(name) ? name.apply(this) : name;
+                  const resolvedConfig = isFunction(config) ? config.apply(this) : config;
+
+                  return {
+                      name: resolvedName,
+                      grouping: resolvedConfig?.grouping,
+                      sequential: Boolean(resolvedConfig?.sequential),
+                      enableHandler: Boolean(resolvedConfig?.enableHandler ?? true),
+                      allowInstant: Boolean(resolvedConfig?.allowInstant),
+                  };
+              };
+    return SetMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
 }
