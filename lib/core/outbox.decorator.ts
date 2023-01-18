@@ -2,6 +2,7 @@ import { SetMetadata } from '@nestjs/common';
 import { isFunction } from 'lodash';
 
 export const OUTBOX_DECORATOR_METADATA = 'OUTBOX_DECORATOR_METADATA';
+export const MANUAL_OUTBOX_DECORATOR_METADATA_GUARD = '::OUTBOX_DECORATOR_METADATA_GUARD';
 
 export interface OutboxDecoratorMetadata {
     name: string;
@@ -76,3 +77,5 @@ export function Outbox(
               };
     return SetMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
 }
+export const ManualOutbox = () =>
+    SetMetadata(OUTBOX_DECORATOR_METADATA, MANUAL_OUTBOX_DECORATOR_METADATA_GUARD);

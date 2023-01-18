@@ -22,7 +22,7 @@ describe('Test decorator dynamic config', () => {
         await app.close();
     });
 
-    it('Should pass instant when allowed', async () => {
+    it('Should resolve dynamic config', async () => {
         const testSpy = spyOnOutbox(testService.testDynamic);
         await expect(testService.testDynamic()).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
@@ -30,5 +30,17 @@ describe('Test decorator dynamic config', () => {
         const outbox = (testService.testDynamic as any).outbox as RegisteredOutbox;
         expect(outbox).toBeDefined();
         expect(outbox.name).toStrictEqual(`dynamic${testService.random}`);
+        // TODO dynamic config object
+    });
+
+    // TODO different test suite
+    it('Should set outbox metadata manually', async () => {
+        const testSpy = spyOnOutbox(testService.testManual);
+        await expect(testService.testManual()).resolves.not.toThrow();
+        expect(testSpy).toHaveBeenCalledTimes(1);
+        expect(testSpy).toHaveBeenCalledWith();
+        const outbox = (testService.testManual as any).outbox as RegisteredOutbox;
+        expect(outbox).toBeDefined();
+        expect(outbox.name).toStrictEqual('manually');
     });
 });

@@ -9,7 +9,10 @@ import type { RegisteredOutbox } from './common';
 import { OUTBOX_MODULE_CONFIG, OutboxModuleConfig } from './outbox.config';
 import { OutboxPersistenceEngine } from '../engines/engine.service';
 import type { OutboxDecoratorMetadataType } from './outbox.decorator';
-import { OUTBOX_DECORATOR_METADATA } from './outbox.decorator';
+import {
+    MANUAL_OUTBOX_DECORATOR_METADATA_GUARD,
+    OUTBOX_DECORATOR_METADATA,
+} from './outbox.decorator';
 import type pino from 'pino';
 import type { OnModuleDestroy } from '@nestjs/common/interfaces/hooks/on-destroy.interface';
 import { isFunction } from 'lodash';
@@ -177,6 +180,12 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             OUTBOX_DECORATOR_METADATA,
             instance[methodKey],
         );
+        // @ts-expect-error
+        if (eventListenerMetadataWrapper === MANUAL_OUTBOX_DECORATOR_METADATA_GUARD) {
+            throw new ConflictException(
+                `@ManualOutbox ${instanceName}.${methodKey} does not have configuration present. Did you forget to assign it in constructor?`,
+            );
+        }
         if (!eventListenerMetadataWrapper) {
             return;
         }
@@ -185,6 +194,11 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             : eventListenerMetadataWrapper;
 
         const types = Reflect.getMetadata('design:paramtypes', instance, methodKey);
+        if (!types) {
+            throw new ConflictException(
+                `Could not read design:paramtypes on ${instanceName}.${methodKey}, did you forget the @ManualOutbox decorator?`,
+            );
+        }
         const {
             name: originalName,
             grouping: originalGrouping,
