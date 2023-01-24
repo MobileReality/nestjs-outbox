@@ -5,6 +5,7 @@ import type { RegisteredOutbox, RegisteredOutboxMethod } from '../core/common';
 import { isSerializable } from '../core/common';
 import type { OutboxModuleEngineConfig } from './engines.config';
 import type { OutboxEntity } from './typeorm/outbox.entity';
+import type { EntityManager } from 'typeorm';
 
 export abstract class OutboxPersistenceEngine<T> {
     protected constructor(protected readonly config: OutboxModuleConfig) {}
@@ -12,17 +13,24 @@ export abstract class OutboxPersistenceEngine<T> {
     protected async callOriginal(
         outbox: RegisteredOutbox,
         args: any[],
+        manager: EntityManager | null,
         outboxInfo: OutboxEntity | false = false,
     ) {
         const original = outbox.originalFunction;
         let finalArgs = args;
-        if (this.config.appendOutboxInfo) {
+        const txPos = outbox.transactionParamPos ?? -1;
+        if (this.config.appendOutboxInfo || txPos > -1) {
             // We need to fill optional parameters with undefined
-            const missing = (outbox.argumentCount ?? 0) - args.length;
+            const knownPos = txPos === -1 ? outbox.argumentCount ?? args.length - 1 : txPos;
+            const missing = knownPos - args.length;
             const fillers =
                 // eslint-disable-next-line unicorn/no-useless-undefined
                 missing > 0 ? Array.from({ length: missing }).fill(undefined) : [];
-            finalArgs = [...args, ...fillers, outboxInfo];
+            finalArgs = [...args, ...fillers];
+            finalArgs[knownPos] = manager;
+            if (this.config.appendOutboxInfo) {
+                finalArgs.push(outboxInfo);
+            }
         }
         return await original.apply(outbox.originalThis, finalArgs);
     }
@@ -35,12 +43,11 @@ export abstract class OutboxPersistenceEngine<T> {
         ...args: any[]
     ): Promise<void>;
     public hookOriginal(config: OutboxModuleEngineConfig, outbox: RegisteredOutboxMethod) {
-        const paramPosition = this.getParamPosition(config, outbox);
         // Hook the function
         outbox.originalThis[outbox.methodKey] = async (...args: any[]) => {
             const transactionObject: T | undefined =
                 config.transactionResolver === TransactionResolverEnum.PARAM
-                    ? (args[paramPosition] as T)
+                    ? (args[outbox.transactionParamPos] as T)
                     : ((await config.transactionResolver?.()) as T | undefined);
 
             if (!transactionObject) {
@@ -50,7 +57,7 @@ export abstract class OutboxPersistenceEngine<T> {
                     );
                 }
                 if (outbox.instantBypass) {
-                    return await this.callOriginal(outbox, args, false);
+                    return await this.callOriginal(outbox, args, null, false);
                 }
                 await this.saveOutboxCall(null, outbox, args);
                 return;
@@ -65,30 +72,5 @@ export abstract class OutboxPersistenceEngine<T> {
             await this.saveOutboxCall(transactionObject, outbox, filteredArgs);
         };
         outbox.originalThis[outbox.methodKey].outbox = outbox;
-    }
-    private getParamPosition(
-        config: OutboxModuleEngineConfig,
-        outbox: RegisteredOutboxMethod,
-    ): number {
-        const types = Reflect.getMetadata(
-            'design:paramtypes',
-            outbox.originalThis,
-            outbox.methodKey,
-        );
-        if (config.transactionResolver === TransactionResolverEnum.PARAM) {
-            const transactionClass = this.getTransactionClass();
-            if (!transactionClass) {
-                throw new ConflictException(
-                    `Transaction resolver is set to PARAM, but not supported by persistence provider ${this.constructor.name}`,
-                );
-            }
-            if (types.length === 0 || types[types.length - 1] !== transactionClass) {
-                throw new ConflictException(
-                    `Transaction resolver is set to PARAM, but last parameter is not of type ${transactionClass.name}`,
-                );
-            }
-            return types.length - 1;
-        }
-        return -1;
     }
 }

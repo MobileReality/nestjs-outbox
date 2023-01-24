@@ -6,7 +6,7 @@ import type { Module } from '@nestjs/core/injector/module';
 import crc from 'crc';
 import { MultiMap } from 'mnemonist';
 import type { RegisteredOutbox, RegisteredOutboxMethod } from './common';
-import { OUTBOX_MODULE_CONFIG, OutboxModuleConfig } from './outbox.config';
+import { OUTBOX_MODULE_CONFIG, OutboxModuleConfig, TransactionResolverEnum } from './outbox.config';
 import { OutboxPersistenceEngine } from '../engines/engine.service';
 import type { OutboxDecoratorMetadataType } from './outbox.decorator';
 import {
@@ -16,6 +16,9 @@ import {
 import type pino from 'pino';
 import type { OnModuleDestroy } from '@nestjs/common/interfaces/hooks/on-destroy.interface';
 import { isFunction } from 'lodash';
+import type { OutboxModuleEngineConfig } from '../engines';
+import type { TransactionParamType } from './param.decorators';
+import { OUTBOX_TRANSACTION_PARAM } from './param.decorators';
 
 @Injectable()
 export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleDestroy {
@@ -97,7 +100,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         }
     }
 
-    async pollOutboxesInternal() {
+    private async pollOutboxesInternal() {
         try {
             const groupings = [...this.enabledGroupings];
             const promises = groupings.map((name) =>
@@ -117,7 +120,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         }
     }
 
-    checkOutboxSanity() {
+    private checkOutboxSanity() {
         const errors: string[] = [];
         this.groupings.forEachAssociation((values, grouping) => {
             let sequential: boolean | null = null;
@@ -147,7 +150,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         }
     }
 
-    loadOutboxes() {
+    private loadOutboxes() {
         const providers = this.discoveryService.getProviders();
         const controllers = this.discoveryService.getControllers();
         [...providers, ...controllers]
@@ -180,14 +183,14 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             OUTBOX_DECORATOR_METADATA,
             instance[methodKey],
         );
+        if (!eventListenerMetadataWrapper) {
+            return;
+        }
         // @ts-expect-error
         if (eventListenerMetadataWrapper === MANUAL_OUTBOX_DECORATOR_METADATA_GUARD) {
             throw new ConflictException(
                 `@ManualOutbox ${instanceName}.${methodKey} does not have configuration present. Did you forget to assign it in constructor?`,
             );
-        }
-        if (!eventListenerMetadataWrapper) {
-            return;
         }
         const eventListenerMetadata = isFunction(eventListenerMetadataWrapper)
             ? eventListenerMetadataWrapper.apply(instance)
@@ -204,11 +207,14 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             grouping: originalGrouping,
             sequential,
             enableHandler,
+            delay,
             allowInstant,
             instantBypass,
         } = eventListenerMetadata;
         const name = OutboxService.shortName(originalName);
         const grouping = originalGrouping ? OutboxService.shortName(originalGrouping) : name;
+
+        const transactionParamPos = this.getParamPosition(this.config, instance, methodKey);
 
         const outbox: RegisteredOutboxMethod = {
             type: 'method',
@@ -216,6 +222,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             name,
             grouping,
             sequential: Boolean(sequential),
+            delay: Number(delay < 1 ? 0 : delay),
             allowInstant: Boolean(allowInstant),
             instantBypass: Boolean(instantBypass),
             originalThis: instance,
@@ -223,6 +230,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             instanceName,
             methodKey,
             argumentCount: types.length,
+            transactionParamPos,
         };
         const previousOutbox = this.outboxes.get(name);
         if (previousOutbox) {
@@ -251,7 +259,37 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         }
     }
 
-    static shortName(name: string): string {
+    private getParamPosition(
+        config: OutboxModuleEngineConfig,
+        originalThis: any,
+        methodKey: string,
+    ): number {
+        if (config.transactionResolver !== TransactionResolverEnum.PARAM) {
+            return -1;
+        }
+        const transactionClass = this.persistence.getTransactionClass();
+        if (!transactionClass) {
+            throw new ConflictException(
+                `Transaction resolver is set to PARAM, but not supported by persistence provider ${this.constructor.name}`,
+            );
+        }
+        const decoratedPosition: TransactionParamType = Reflect.getMetadata(
+            OUTBOX_TRANSACTION_PARAM,
+            originalThis[methodKey],
+        );
+        if (decoratedPosition) {
+            return decoratedPosition.parameterIndex;
+        }
+        const types = Reflect.getMetadata('design:paramtypes', originalThis, methodKey);
+        if (types.length === 0 || types[types.length - 1] !== transactionClass) {
+            throw new ConflictException(
+                `Transaction resolver is set to PARAM, but last parameter is not of type ${transactionClass.name}`,
+            );
+        }
+        return types.length - 1;
+    }
+
+    private static shortName(name: string): string {
         if (name.length > 32) {
             const hash = crc.crc32(name).toString(16);
             return `${name.slice(0, 21)}_${hash}`;

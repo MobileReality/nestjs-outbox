@@ -12,9 +12,9 @@ import {
 import { OutboxEntity, OutboxEntityPostgres, OutboxStatus } from './outbox.entity';
 import { OutboxService } from '../../core/outbox.service';
 import type pino from 'pino';
+import { addSeconds } from 'date-fns';
+import { OracleDriver } from 'typeorm/driver/oracle/OracleDriver';
 
-// TODO test on mariadb
-// TODO postgresql
 // TODO can this work with oracle too?
 
 @Injectable()
@@ -45,6 +45,7 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
         await entityManager.insert(OutboxEntity, {
             name: outbox.name,
             grouping: outbox.grouping,
+            nextRetry: addSeconds(new Date(), outbox.delay),
             serializedArgs,
         });
     }
@@ -85,7 +86,32 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
                     }
                     const deserializedArgs = JSON.parse(pending.serializedArgs);
 
-                    await this.callOriginal(outbox, deserializedArgs, pending);
+                    // @ts-expect-error
+                    if (manager.connection.driver.transactionSupport === 'nested') {
+                        await manager.transaction(async (internalManager) => {
+                            await this.callOriginal(
+                                outbox,
+                                deserializedArgs,
+                                internalManager,
+                                pending,
+                            );
+                        });
+                    } else {
+                        await manager.query('SAVEPOINT outbox_internal');
+                        try {
+                            await this.callOriginal(outbox, deserializedArgs, manager, pending);
+                        } catch (err) {
+                            await manager.query('ROLLBACK TO SAVEPOINT outbox_internal');
+                            // noinspection ExceptionCaughtLocallyJS
+                            throw err;
+                        } finally {
+                            // eslint-disable-next-line max-depth
+                            if (!(manager.connection.driver instanceof OracleDriver)) {
+                                await manager.query('RELEASE SAVEPOINT outbox_internal');
+                            }
+                        }
+                    }
+
                     success = true;
                 } catch (err) {
                     this.logger.error({ err, pending, outbox }, `Error during outbox processing`);

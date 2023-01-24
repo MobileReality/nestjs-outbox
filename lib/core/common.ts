@@ -9,19 +9,19 @@ export type RegisteredOutboxHandler = {
     // tag: string;
     handlerEnabled: boolean;
     sequential: boolean;
+    delay: number;
 
     originalThis?: any;
     originalFunction: any;
 
-    argumentCount?: number;
+    argumentCount: number;
+    transactionParamPos: number;
 };
 
 export type RegisteredOutboxMethod = Omit<RegisteredOutboxHandler, 'type'> & {
     type: 'method';
     methodKey: string;
     instanceName: string;
-
-    argumentCount: number;
 };
 
 export type RegisteredOutbox = RegisteredOutboxHandler | RegisteredOutboxMethod;

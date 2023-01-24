@@ -26,7 +26,7 @@ describe('Test decorator dynamic config', () => {
         const testSpy = spyOnOutbox(testService.testDynamic);
         await expect(testService.testDynamic()).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
-        expect(testSpy).toHaveBeenCalledWith();
+        expect(testSpy).toHaveBeenCalledWith(null);
         const outbox = (testService.testDynamic as any).outbox as RegisteredOutbox;
         expect(outbox).toBeDefined();
         expect(outbox.name).toStrictEqual(`dynamic${testService.random}`);
@@ -38,7 +38,7 @@ describe('Test decorator dynamic config', () => {
         const testSpy = spyOnOutbox(testService.testManual);
         await expect(testService.testManual()).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
-        expect(testSpy).toHaveBeenCalledWith();
+        expect(testSpy).toHaveBeenCalledWith(null);
         const outbox = (testService.testManual as any).outbox as RegisteredOutbox;
         expect(outbox).toBeDefined();
         expect(outbox.name).toStrictEqual('manually');

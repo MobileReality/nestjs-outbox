@@ -5,7 +5,7 @@ import { TestService } from './test.service';
 import { OutboxPersistenceEngine } from '../../lib/engines/engine.service';
 import { spyOnOutbox } from '../../lib/util/test.helpers';
 import { OutboxService } from '../../lib/core/outbox.service';
-import { Connection } from 'typeorm';
+import { Connection, EntityManager } from 'typeorm';
 import { OutboxEntity } from '../../lib/engines/typeorm/outbox.entity';
 
 describe('Test appendOutboxInfo', () => {
@@ -26,8 +26,9 @@ describe('Test appendOutboxInfo', () => {
         const testSpy = spyOnOutbox(testService.testBypass);
         await expect(testService.testBypass(0)).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
-        expect(testSpy).toHaveBeenCalledWith(0, undefined, undefined, false);
+        expect(testSpy).toHaveBeenCalledWith(0, undefined, null, false);
     });
+    // TODO this is not a generic test, only typeorm based
     it('Should append false for non-instant', async () => {
         const testSpy = spyOnOutbox(testService.test).mockResolvedValue();
         await app.get(Connection).transaction(async (manager) => {
@@ -36,6 +37,11 @@ describe('Test appendOutboxInfo', () => {
         await app.get(OutboxService).pollOutboxes();
         await app.get(OutboxService).pollOutboxes();
         expect(testSpy).toHaveBeenCalledTimes(1);
-        expect(testSpy).toHaveBeenCalledWith(0, {}, undefined, expect.any(OutboxEntity));
+        expect(testSpy).toHaveBeenCalledWith(
+            0,
+            {},
+            expect.any(EntityManager),
+            expect.any(OutboxEntity),
+        );
     });
 });

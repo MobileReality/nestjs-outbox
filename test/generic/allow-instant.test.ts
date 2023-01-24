@@ -31,7 +31,7 @@ describe('Test allowInstant for PARAM', () => {
         const testSpy = spyOnOutbox(testService.testBypass);
         await expect(testService.testBypass(0)).resolves.not.toThrow();
         expect(testSpy).toHaveBeenCalledTimes(1);
-        expect(testSpy).toHaveBeenCalledWith(0);
+        expect(testSpy).toHaveBeenCalledWith(0, undefined, null);
     });
     it('Should fail instant without transaction', async () => {
         await expect(testService.test(0)).rejects.toThrowError(/allowInstant/);
