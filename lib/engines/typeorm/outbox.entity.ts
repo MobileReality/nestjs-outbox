@@ -24,7 +24,7 @@ export class OutboxEntity {
     @Index()
     tag: string | null;
 
-    @Column({ name: 'serialized_args', type: 'text' })
+    @Column({ name: 'serialized_args', type: 'longtext' })
     serializedArgs: string;
 
     @Column({

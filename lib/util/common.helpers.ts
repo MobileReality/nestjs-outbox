@@ -27,6 +27,7 @@ export function setManualOutboxConfig<T, M extends keyof T>(
             instantBypass: false,
             ...config,
         },
-        object[methodName],
+        object,
+        methodName as string | symbol,
     );
 }

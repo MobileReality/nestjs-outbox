@@ -179,10 +179,11 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         moduleRef: Module,
     ) {
-        const eventListenerMetadataWrapper = this.reflector.get<OutboxDecoratorMetadataType>(
+        const eventListenerMetadataWrapper = Reflect.getMetadata(
             OUTBOX_DECORATOR_METADATA,
-            instance[methodKey],
-        );
+            instance,
+            methodKey,
+        ) as OutboxDecoratorMetadataType<any>;
         if (!eventListenerMetadataWrapper) {
             return;
         }
@@ -193,7 +194,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             );
         }
         const eventListenerMetadata = isFunction(eventListenerMetadataWrapper)
-            ? eventListenerMetadataWrapper.apply(instance)
+            ? eventListenerMetadataWrapper.apply(instance, [instance])
             : eventListenerMetadataWrapper;
 
         const types = Reflect.getMetadata('design:paramtypes', instance, methodKey);

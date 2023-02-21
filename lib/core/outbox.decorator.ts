@@ -1,4 +1,5 @@
-import { SetMetadata } from '@nestjs/common';
+import type { CustomDecorator } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { isFunction } from 'lodash';
 
 export const OUTBOX_DECORATOR_METADATA = 'OUTBOX_DECORATOR_METADATA';
@@ -13,7 +14,9 @@ export interface OutboxDecoratorMetadata {
     allowInstant: boolean;
     instantBypass: boolean;
 }
-export type OutboxDecoratorMetadataType = OutboxDecoratorMetadata | (() => OutboxDecoratorMetadata);
+export type OutboxDecoratorMetadataType<T = void> =
+    | OutboxDecoratorMetadata
+    | ((self: T) => OutboxDecoratorMetadata);
 
 export interface OutboxHandlerDecoratorConfig {
     grouping?: string;
@@ -45,7 +48,9 @@ export interface OutboxDecoratorConfig extends OutboxHandlerDecoratorConfig {
      */
     instantBypass?: boolean;
 }
-export type OutboxDecoratorConfigType = OutboxDecoratorConfig | (() => OutboxDecoratorConfig);
+export type OutboxDecoratorConfigType<T = void> =
+    | OutboxDecoratorConfig
+    | ((self: T) => OutboxDecoratorConfig);
 
 type allowedDescriptors =
     | TypedPropertyDescriptor<(...p: any[]) => Promise<void>>
@@ -64,16 +69,35 @@ type outboxDecorator = <
     descriptor: D,
 ) => D;
 
+export const SetOutboxMetadata = <K = string, V = any>(
+    metadataKey: K,
+    metadataValue: V,
+): CustomDecorator<K> => {
+    const decoratorFactory = (target: object, key?: any, descriptor?: any) => {
+        if (descriptor) {
+            Reflect.defineMetadata(metadataKey, metadataValue, target, key);
+            return descriptor;
+        }
+        throw new ConflictException('SetOutboxMetadata decorator must be used on a method');
+    };
+    decoratorFactory.KEY = metadataKey;
+    return decoratorFactory;
+};
+
+// cannot infer self type -.- https://github.com/microsoft/TypeScript/issues/37300
 export function Outbox(
-    name: string | (() => string),
-    config?: OutboxDecoratorConfigType,
+    name: string | ((self: any) => string),
+    config?: OutboxDecoratorConfigType<any>,
 ): outboxDecorator;
-export function Outbox(name: string | (() => string), enableHandler: boolean): outboxDecorator;
+export function Outbox(
+    name: string | ((self: any) => string),
+    enableHandler: boolean,
+): outboxDecorator;
 
 // eslint-disable-next-line func-style
 export function Outbox(
-    name: string | (() => string),
-    configOrBool?: OutboxDecoratorConfigType | boolean,
+    name: string | ((self: any) => string),
+    configOrBool?: OutboxDecoratorConfigType<any> | boolean,
 ): outboxDecorator {
     // TODO check if metadata not already set?
     const config =
@@ -89,9 +113,11 @@ export function Outbox(
                   instantBypass: Boolean(config?.instantBypass),
                   delay: config?.delay ?? 0,
               }
-            : function f(this: any) {
-                  const resolvedName = isFunction(name) ? name.apply(this) : name;
-                  const resolvedConfig = isFunction(config) ? config.apply(this) : config;
+            : function f(this: any, self: any) {
+                  const resolvedName = isFunction(name) ? Reflect.apply(name, this, [self]) : name;
+                  const resolvedConfig = isFunction(config)
+                      ? Reflect.apply(config, this, [self])
+                      : config;
 
                   return {
                       name: resolvedName,
@@ -103,10 +129,10 @@ export function Outbox(
                       delay: resolvedConfig?.delay ?? 0,
                   };
               };
-    return SetMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
+    return SetOutboxMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
 }
 export const ManualOutbox = () =>
-    SetMetadata(OUTBOX_DECORATOR_METADATA, MANUAL_OUTBOX_DECORATOR_METADATA_GUARD);
+    SetOutboxMetadata(OUTBOX_DECORATOR_METADATA, MANUAL_OUTBOX_DECORATOR_METADATA_GUARD);
 
 export function OutboxHandler(
     name: string | (() => string),
@@ -150,5 +176,5 @@ export function OutboxHandler(
                       instantBypass: false,
                   };
               };
-    return SetMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
+    return SetOutboxMetadata(OUTBOX_DECORATOR_METADATA, decoratorMeta);
 }
