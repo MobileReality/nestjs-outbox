@@ -30,7 +30,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
 
     private isRunning = false;
     private timer: NodeJS.Timeout | null = null;
-    private readonly stepTimeMs = 1000; // TODO
+    private readonly stepTimeMs;
     private currentPoll: Promise<void> | null = null;
 
     constructor(
@@ -43,6 +43,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
         @Inject(OUTBOX_MODULE_CONFIG)
         private readonly config: OutboxModuleConfig,
     ) {
+        this.stepTimeMs = this.config.pollingInterval ?? 1000;
         this.logger = this.config.logger!.child({ ctx: this.constructor.name });
     }
 
@@ -87,7 +88,7 @@ export class OutboxService<T = any> implements OnApplicationBootstrap, OnModuleD
             clearTimeout(this.timer);
             this.timer = null;
         }
-        this.logger.info('Polling outboxes...');
+        this.logger.trace('Polling outboxes...');
         if (this.currentPoll !== null) {
             await this.currentPoll;
         }

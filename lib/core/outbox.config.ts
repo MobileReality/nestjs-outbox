@@ -16,6 +16,7 @@ export interface OutboxModuleBaseConfig {
     allowInstant?: boolean;
     appendOutboxInfo?: boolean;
     autostartPolling?: boolean;
+    pollingInterval?: number;
 
     // TODO nestjs logging service support?
     logger?: /* LoggerService |*/ pino.Logger;

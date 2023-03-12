@@ -22,8 +22,7 @@
   },
   "homepage": "https://github.com/MobileReality/nestjs-outbox/#readme",
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org/"
   },
   "license": "MIT",
   "scripts": {
