@@ -86,7 +86,8 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
                     }
                     const deserializedArgs = JSON.parse(pending.serializedArgs);
 
-                    // @ts-expect-error
+                    // eslint-disable-next-line @typescript-eslint/prefer-ts-expect-error
+                    // @ts-ignore
                     if (manager.connection.driver.transactionSupport === 'nested') {
                         await manager.transaction(async (internalManager) => {
                             await this.callOriginal(
