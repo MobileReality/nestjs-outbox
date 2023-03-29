@@ -1,6 +1,6 @@
 {
   "name": "@mobile-reality/nestjs-outbox",
-  "version": "0.0.1-alpha.3",
+  "version": "0.0.1-alpha.4",
   "description": "Multi-engine outbox pattern for NestJS",
   "author": "Mobile Reality <biuro@mobilereality.pl> (https://mobilereality.pl)",
   "contributors": [
@@ -99,11 +99,11 @@
     "@mikro-orm/postgresql": "^5.3.1",
     "@nestjs/common": "^8.0.0 || ^9.0.0",
     "@nestjs/core": "^8.0.0 || ^9.0.0",
-    "@nestjs/typeorm": "~8.0.4 || ^9.0.0",
+    "@nestjs/typeorm": "^8.0.4 || ^9.0.0",
     "date-fns": "^2.29.3",
     "pino": "^8.6.0",
     "reflect-metadata": "^0.1.13",
-    "typeorm": "0.2.38 || ~0.3.1"
+    "typeorm": "~0.2.38 || ~0.3.1"
   },
   "peerDependenciesMeta": {
     "@nestjs/typeorm": {
