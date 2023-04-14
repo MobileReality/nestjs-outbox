@@ -54,13 +54,16 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
         await this.connection.transaction(async (manager: EntityManager) => {
             let pendings: OutboxEntity[];
             try {
-                pendings = await manager
+                const query = manager
                     .getRepository(OutboxEntity)
                     .createQueryBuilder('o')
                     .where('o.status = :status', {
                         status: OutboxStatus.PENDING,
-                    })
-                    .andWhere('o.next_retry < CURRENT_TIMESTAMP(6)')
+                    });
+                if (!sequential) {
+                    query.andWhere('o.next_retry < CURRENT_TIMESTAMP(6)');
+                }
+                pendings = await query
                     .andWhere('o.grouping = :groupingName', { groupingName })
                     .limit(10) // TODO batch size
                     .orderBy(sequential ? 'o.created_at' : 'o.next_retry', 'ASC')
