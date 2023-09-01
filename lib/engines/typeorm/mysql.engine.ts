@@ -139,6 +139,7 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
                               OUTBOX_RETRY_INTERVAL * (pending.retryCount + 1),
                           ),
                 });
+                if (!success && sequential) break;
             }
             await manager
                 .createQueryBuilder()
