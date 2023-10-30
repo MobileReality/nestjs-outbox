@@ -14,6 +14,7 @@ import { OutboxService } from '../../core/outbox.service';
 import type pino from 'pino';
 import { addSeconds } from 'date-fns';
 import { OracleDriver } from 'typeorm/driver/oracle/OracleDriver';
+import { omit } from 'lodash';
 
 // TODO can this work with oracle too?
 
@@ -118,7 +119,14 @@ export class MysqlPersistenceService extends OutboxPersistenceEngine<EntityManag
 
                     success = true;
                 } catch (err) {
-                    this.logger.error({ err, pending, outbox }, `Error during outbox processing`);
+                    this.logger.error(
+                        {
+                            err,
+                            pending,
+                            outbox: omit(outbox, ['originalThis', 'originalFunction']),
+                        },
+                        `Error during outbox processing`,
+                    );
                     // TODO log
                     success = false;
                 }

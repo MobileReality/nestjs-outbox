@@ -1,6 +1,6 @@
 {
   "name": "@mobile-reality/nestjs-outbox",
-  "version": "0.0.1-alpha.6",
+  "version": "0.0.1-alpha.7",
   "description": "Multi-engine outbox pattern for NestJS",
   "author": "Mobile Reality <biuro@mobilereality.pl> (https://mobilereality.pl)",
   "contributors": [
